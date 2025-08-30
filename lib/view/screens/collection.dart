@@ -72,104 +72,77 @@ class _CollectionDailyActivityState extends State<CollectionDailyActivity> {
     'Other Issues',
   ];
 
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _getCurrentLocation();
+    });
+  }
+
   Future<void> _getCurrentLocation() async {
     try {
-      // Check location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          _showLocationPermissionDialog();
+          if (mounted) _showLocationPermissionDialog();
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        _showLocationPermissionDialog();
+        if (mounted) _showLocationPermissionDialog();
         return;
       }
 
-      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _showLocationServiceDialog();
+        if (mounted) _showLocationServiceDialog();
         return;
       }
-
-      // Show loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return Center(
-            child: Container(
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: Colors.blue),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Getting your location...',
-                    style: GoogleFonts.dmSans(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
 
       // Get current position
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Update the location field
+      if (!mounted) return;
+
       setState(() {
         _locationController.text =
             'Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}';
       });
 
-      // Close loading dialog
-      Navigator.of(context).pop();
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.location_on, color: Colors.white, size: 16.sp),
-              SizedBox(width: 8.w),
-              Text(
-                'Location captured successfully!',
-                style: GoogleFonts.dmSans(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14.sp,
+      // Show success message only if user is already in screen
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.white, size: 16.sp),
+                SizedBox(width: 8.w),
+                Text(
+                  'Location captured successfully!',
+                  style: GoogleFonts.dmSans(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14.sp,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            backgroundColor: const Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            margin: EdgeInsets.all(16.w),
           ),
-          backgroundColor: const Color(0xFF059669),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          margin: EdgeInsets.all(16.w),
-        ),
-      );
-    } catch (e) {
-      // Close loading dialog if open
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+        );
       }
+    } catch (e) {
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -177,11 +150,13 @@ class _CollectionDailyActivityState extends State<CollectionDailyActivity> {
             children: [
               Icon(Icons.error, color: Colors.white, size: 16.sp),
               SizedBox(width: 8.w),
-              Text(
-                'Failed to get location: $e',
-                style: GoogleFonts.dmSans(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14.sp,
+              Expanded(
+                child: Text(
+                  'Failed to get location: $e',
+                  style: GoogleFonts.dmSans(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14.sp,
+                  ),
                 ),
               ),
             ],
@@ -331,7 +306,7 @@ class _CollectionDailyActivityState extends State<CollectionDailyActivity> {
           style: GoogleFonts.dmSans(fontSize: 14.sp, color: textPrimaryColor),
           readOnly: true,
           decoration: InputDecoration(
-            hintText: 'Tap to get current location',
+            hintText: 'Fetching location...',
             hintStyle: GoogleFonts.dmSans(
               fontSize: 14.sp,
               color: textSecondaryColor,
@@ -341,50 +316,24 @@ class _CollectionDailyActivityState extends State<CollectionDailyActivity> {
               padding: EdgeInsets.all(12.w),
               child: Icon(Icons.location_on, color: primaryColor, size: 20.sp),
             ),
-            suffixIcon: IconButton(
-              onPressed: _getCurrentLocation,
-              icon: Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Icon(
-                  Icons.my_location,
-                  color: primaryColor,
-                  size: 18.sp,
-                ),
-              ),
-              tooltip: 'Get Current Location',
-            ),
+            // 🚫 Removed suffix icon (no button)
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(
-                color: const Color(0xFFE2E8F0),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E8F0),
                 width: 1.5,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(
-                color: const Color(0xFFE2E8F0),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E8F0),
                 width: 1.5,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(color: primaryColor, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(
-                color: const Color(0xFFDC2626),
-                width: 1.5,
-              ),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: const Color(0xFFDC2626), width: 2),
             ),
             filled: true,
             fillColor: const Color(0xFFFAFAFA),
@@ -399,7 +348,6 @@ class _CollectionDailyActivityState extends State<CollectionDailyActivity> {
             }
             return null;
           },
-          onTap: _getCurrentLocation,
         ),
       ],
     );

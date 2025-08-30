@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'daily_acticvity.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -23,19 +22,44 @@ class _LoginState extends State<Login> {
   bool _obscurePassword = true;
   String? errorMessage;
 
-  void _login() {
-    setState(() {
-      if (_usernameController.text == dummyUsername &&
-          _passwordController.text == dummyPassword) {
-        errorMessage = null;
-        Get.offAll(ActivitySelectionPage());
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('✅ Login Successful')));
-      } else {
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  /// ✅ Check if user is already logged in
+  Future<void> _checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    if (isLoggedIn) {
+      // Navigate directly to dashboard
+      Future.delayed(Duration.zero, () {
+        Get.offAll(() => ActivitySelectionPage());
+      });
+    }
+  }
+
+  /// ✅ Handle Login
+  void _login() async {
+    if (_usernameController.text == dummyUsername &&
+        _passwordController.text == dummyPassword) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
+      setState(() => errorMessage = null);
+
+      Get.offAll(() => ActivitySelectionPage());
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('✅ Login Successful')));
+    } else {
+      setState(() {
         errorMessage = '❌ Invalid username or password';
-      }
-    });
+      });
+    }
   }
 
   @override
