@@ -1,0 +1,403 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hive/hive.dart';
+
+import 'daily_acticvity.dart';
+import 'dashboard_select_data.dart';
+
+class ActivityDataTablePage extends StatefulWidget {
+  const ActivityDataTablePage({super.key});
+
+  @override
+  State<ActivityDataTablePage> createState() => _ActivityDataTablePageState();
+}
+
+class _ActivityDataTablePageState extends State<ActivityDataTablePage> {
+  List<DailyActivityModel> _activities = [];
+  String _selectedType = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadActivities();
+  }
+
+  Future<void> _loadActivities() async {
+    final box = await Hive.openBox<DailyActivityModel>('daily_activities');
+    setState(() {
+      _activities = box.values.toList();
+    });
+  }
+
+  List<DataColumn> _getColumns(String type) {
+    switch (type) {
+      case 'Business':
+        return [
+          _buildHeader('Business Type'),
+          _buildHeader('Customer'),
+          _buildHeader('Call Type'),
+          _buildHeader('Activity Status'),
+          _buildHeader('Product Category'),
+          _buildHeader('Business Purpose'),
+          _buildHeader('Medium'),
+          _buildHeader('Vehicle'),
+          _buildHeader('Edition'),
+          _buildHeader('Priority Level'),
+          _buildHeader('Size'),
+          _buildHeader('Date'),
+        ];
+      case 'Designing':
+        return [
+          _buildHeader('Business Type'),
+          _buildHeader('Client Name'),
+          _buildHeader('Worktype'),
+          _buildHeader('Result'),
+          _buildHeader('Size'),
+          _buildHeader('Date'),
+        ];
+      case 'Collection':
+        return [
+          _buildHeader('Business Type'),
+          _buildHeader('Client Name'),
+          _buildHeader('Call Type'),
+          _buildHeader('Result'),
+          _buildHeader('Pay Type'),
+          _buildHeader('Invoice No'),
+          _buildHeader('Issues'),
+          _buildHeader('Date'),
+        ];
+      case 'All':
+      default:
+        return [
+          _buildHeader('Business Type'),
+          _buildHeader('Customer'),
+          _buildHeader('Call Type'),
+          _buildHeader('Activity Type'),
+          _buildHeader('Product Category'),
+          _buildHeader('Reason'),
+          _buildHeader('Medium'),
+          _buildHeader('Vehicle'),
+          _buildHeader('Edition'),
+          _buildHeader('Position'),
+          _buildHeader('Size'),
+          _buildHeader('Date'),
+        ];
+    }
+  }
+
+  List<DataRow> _getRows(List<DailyActivityModel> activities, String type) {
+    return activities.map((activity) {
+      switch (type) {
+        case 'Business':
+          return DataRow(
+            cells: [
+              _buildCell(activity.businessType),
+              _buildCell(activity.customer),
+              _buildCell(activity.callType),
+              _buildCell(activity.activityType),
+              _buildCell(activity.productCategory),
+              _buildCell(activity.reason),
+              _buildCell(activity.medium),
+              _buildCell(activity.vehicle),
+              _buildCell(activity.edition),
+              _buildCell(activity.position),
+              _buildCell(activity.size),
+              _buildCell(
+                '${activity.createdDate.day}/${activity.createdDate.month}/${activity.createdDate.year}',
+              ),
+            ],
+          );
+        case 'Designing':
+          return DataRow(
+            cells: [
+              _buildCell(activity.businessType),
+              _buildCell(activity.customer),
+              _buildCell(activity.callType),
+              _buildCell(activity.activityType),
+              _buildCell(activity.size),
+              _buildCell(
+                '${activity.createdDate.day}/${activity.createdDate.month}/${activity.createdDate.year}',
+              ),
+            ],
+          );
+        case 'Collection':
+          return DataRow(
+            cells: [
+              _buildCell(activity.businessType),
+              _buildCell(activity.customer),
+              _buildCell(activity.callType),
+              _buildCell(activity.activityType),
+              _buildCell(activity.productCategory),
+              _buildCell(activity.medium),
+              _buildCell(activity.reason),
+              _buildCell(
+                '${activity.createdDate.day}/${activity.createdDate.month}/${activity.createdDate.year}',
+              ),
+            ],
+          );
+        case 'All':
+        default:
+          return DataRow(
+            cells: [
+              _buildCell(activity.businessType),
+              _buildCell(activity.customer),
+              _buildCell(activity.callType),
+              _buildCell(activity.activityType),
+              _buildCell(activity.productCategory),
+              _buildCell(activity.reason),
+              _buildCell(activity.medium),
+              _buildCell(activity.vehicle),
+              _buildCell(activity.edition),
+              _buildCell(activity.position),
+              _buildCell(activity.size),
+              _buildCell(
+                '${activity.createdDate.day}/${activity.createdDate.month}/${activity.createdDate.year}',
+              ),
+            ],
+          );
+      }
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredActivities = _selectedType == 'All'
+        ? _activities
+        : _activities.where((a) => a.businessType == _selectedType).toList();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        automaticallyImplyLeading: true,
+        title: Text(
+          "Daily Activities Report",
+          style: GoogleFonts.dmSans(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF2563EB),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              Get.off(const ActivitySelectionPage());
+            },
+            icon: const Icon(Icons.add),
+            tooltip: "Add Activity",
+          ),
+        ],
+      ),
+      body: _activities.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 80.sp,
+                    color: Colors.grey[400],
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'No activities found',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Add your first activity to get started',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 14.sp,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(16.w),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedType,
+                    items: ['All', 'Business', 'Designing', 'Collection'].map((
+                      String value,
+                    ) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedType = value!;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Select Activity Type',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  ),
+                ),
+                if (filteredActivities.isEmpty)
+                  Center(
+                    child: Text(
+                      'No activities for selected type',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 16.sp,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 3,
+                            shadowColor: Colors.black12,
+                            child: DataTable(
+                              headingRowColor: MaterialStateProperty.all(
+                                const Color(0xFFEFF6FF),
+                              ),
+                              dataRowHeight: 56.h,
+                              headingRowHeight: 56.h,
+                              horizontalMargin: 16.w,
+                              columnSpacing: 24.w,
+                              border: TableBorder.symmetric(
+                                inside: BorderSide(
+                                  color: Colors.grey[300]!,
+                                  width: 0.5,
+                                ),
+                                outside: BorderSide(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
+                                ),
+                              ),
+                              columns: _getColumns(_selectedType),
+                              rows: _getRows(filteredActivities, _selectedType),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+    );
+  }
+
+  DataColumn _buildHeader(String title) {
+    return DataColumn(
+      label: Text(
+        title,
+        style: GoogleFonts.dmSans(
+          fontWeight: FontWeight.w700,
+          fontSize: 14.sp,
+          color: const Color(0xFF1E293B),
+        ),
+      ),
+    );
+  }
+
+  DataCell _buildCell(String value) {
+    return DataCell(
+      Text(
+        value,
+        style: GoogleFonts.dmSans(
+          fontSize: 13.sp,
+          fontWeight: FontWeight.w400,
+          color: const Color(0xFF475569),
+        ),
+      ),
+    );
+  }
+}
+
+// Additional Hive Model Adapter (you need to generate this with build_runner)
+class DailyActivityModelAdapter extends TypeAdapter<DailyActivityModel> {
+  @override
+  final int typeId = 0;
+
+  @override
+  DailyActivityModel read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return DailyActivityModel(
+      businessType: fields[0] as String,
+      customer: fields[1] as String,
+      callType: fields[2] as String,
+      activityType: fields[3] as String,
+      productCategory: fields[4] as String,
+      reason: fields[5] as String,
+      medium: fields[6] as String,
+      vehicle: fields[7] as String,
+      edition: fields[8] as String,
+      position: fields[9] as String,
+      size: fields[10] as String,
+      location: fields[11] as String,
+      createdDate: fields[12] as DateTime,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, DailyActivityModel obj) {
+    writer
+      ..writeByte(13)
+      ..writeByte(0)
+      ..write(obj.businessType)
+      ..writeByte(1)
+      ..write(obj.customer)
+      ..writeByte(2)
+      ..write(obj.callType)
+      ..writeByte(3)
+      ..write(obj.activityType)
+      ..writeByte(4)
+      ..write(obj.productCategory)
+      ..writeByte(5)
+      ..write(obj.reason)
+      ..writeByte(6)
+      ..write(obj.medium)
+      ..writeByte(7)
+      ..write(obj.vehicle)
+      ..writeByte(8)
+      ..write(obj.edition)
+      ..writeByte(9)
+      ..write(obj.position)
+      ..writeByte(10)
+      ..write(obj.size)
+      ..writeByte(11)
+      ..write(obj.location)
+      ..writeByte(12)
+      ..write(obj.createdDate);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DailyActivityModelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+
+  @override
+  int get hashCode => typeId.hashCode;
+}
