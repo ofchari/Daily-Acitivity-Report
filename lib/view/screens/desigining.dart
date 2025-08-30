@@ -500,7 +500,7 @@ class _DesigningDailyActivityState extends State<DesigningDailyActivity> {
         actions: [
           IconButton(
             onPressed: () {
-              Get.to(() => const ActivityDataTablePage());
+              Get.to(ActivityDataTablePage());
             },
             icon: Icon(Icons.table_chart, size: 24.sp, color: Colors.white),
             tooltip: 'View Activities',
