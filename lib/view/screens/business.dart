@@ -1,13 +1,18 @@
+import 'dart:async';
+
+import 'package:daily_activity_report/utils/route_map/location.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../utils/activity_hive_model.dart';
 import 'activity_report.dart';
-import 'daily_acticvity.dart';
 
 class BusinessDailyActivity extends StatefulWidget {
   const BusinessDailyActivity({super.key});
@@ -23,6 +28,9 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
   // Form controllers
   final _formKey = GlobalKey<FormState>();
   final _mediumController = TextEditingController();
+  final _mediaController = TextEditingController();
+  final _positionController = TextEditingController();
+  final _costController = TextEditingController();
   final _vehicleController = TextEditingController();
   final _editionController = TextEditingController();
   final _sizeController = TextEditingController();
@@ -52,6 +60,35 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _getCurrentLocation();
     });
+  }
+
+  // Add after existing variables
+  List<LatLng> todayLocations = [];
+  Timer? _locationCleanupTimer;
+
+  // Add this method after _getCurrentLocation()
+  Future<void> _saveLocationToHistory(Position position) async {
+    final box = await Hive.openBox<List<String>>('location_history');
+    final today = DateFormat('dd-MM-yyyy').format(DateTime.now());
+
+    List<String> todayLocations = box.get(today, defaultValue: [])!;
+    String newLocation = '${position.latitude},${position.longitude}';
+
+    if (!todayLocations.contains(newLocation)) {
+      todayLocations.add(newLocation);
+      await box.put(today, todayLocations);
+    }
+  }
+
+  // Add this method for 24hr cleanup
+  Future<void> _cleanupOldLocationData() async {
+    final box = await Hive.openBox<List<String>>('location_history');
+    final yesterday = DateTime.now().subtract(Duration(days: 1));
+    final yesterdayKey = DateFormat('dd-MM-yyyy').format(yesterday);
+
+    if (box.containsKey(yesterdayKey)) {
+      await box.delete(yesterdayKey);
+    }
   }
 
   // Fixed business type
@@ -142,6 +179,10 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
       );
 
       if (!mounted) return;
+
+      // ADD THESE LINES:
+      await _saveLocationToHistory(position); // Save to history
+      await _cleanupOldLocationData();
 
       setState(() {
         _locationController.text =
@@ -386,6 +427,94 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
     );
   }
 
+  // Date controllers
+  DateTime? _nextCallDate;
+  Future<void> _selectNextCallDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: textPrimaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _nextCallDate) {
+      setState(() {
+        _nextCallDate = picked;
+      });
+    }
+  }
+
+  Widget _buildDateFormField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Next Call Date',
+          style: GoogleFonts.dmSans(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: textPrimaryColor,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        InkWell(
+          onTap: _selectNextCallDate,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+              borderRadius: BorderRadius.circular(12.r),
+              color: const Color(0xFFFAFAFA),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  margin: EdgeInsets.only(right: 12.w),
+                  padding: EdgeInsets.all(12.w),
+                  child: Icon(
+                    Icons.calendar_today,
+                    color: primaryColor,
+                    size: 20.sp,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    _nextCallDate == null
+                        ? 'Select next call date'
+                        : '${_nextCallDate!.day}/${_nextCallDate!.month}/${_nextCallDate!.year}',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 14.sp,
+                      color: _nextCallDate == null
+                          ? textSecondaryColor
+                          : textPrimaryColor,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  color: textSecondaryColor,
+                  size: 24.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     _mediumController.dispose();
@@ -410,9 +539,12 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
           productCategory: _selectedProductCategory ?? '',
           reason: _selectedReason ?? '',
           medium: _mediumController.text,
+          media: _mediaController.text,
+          position: _positionController.text,
+          cost: _costController.text,
           vehicle: _vehicleController.text,
           edition: _editionController.text,
-          position: _selectedPosition ?? '',
+          // position: _selectedPosition ?? '',
           size: _sizeController.text,
           location: _locationController.text,
           createdDate: DateTime.now(),
@@ -503,6 +635,13 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
         shadowColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            onPressed: () {
+              Get.to(() => const RouteMapPage());
+            },
+            icon: Icon(Icons.location_on, size: 24.sp, color: Colors.white),
+            tooltip: 'View Map',
+          ),
           IconButton(
             onPressed: () {
               Get.to(() => const ActivityDataTablePage());
@@ -620,26 +759,6 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
                         },
                       ),
                       SizedBox(height: 20.h),
-                      _buildDropdownField(
-                        value: _selectedPosition,
-                        label: 'Priority Level',
-                        icon: Icons.place,
-                        items: _positions,
-                        hint: 'Select priority level',
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedPosition = value;
-                          });
-                        },
-                      ),
-                      SizedBox(height: 20.h),
-                      _buildTextFormField(
-                        controller: _sizeController,
-                        label: 'Size',
-                        icon: Icons.photo_size_select_actual,
-                        hint: 'Enter size details',
-                      ),
-                      SizedBox(height: 20.h),
                     ],
                   ),
                   SizedBox(height: 28.h),
@@ -691,6 +810,14 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
                       ),
                       SizedBox(height: 20.h),
                       _buildTextFormField(
+                        controller: _mediaController,
+                        label: 'Media',
+                        icon: Icons.photo_size_select_actual,
+                        hint: 'Enter Media details',
+                      ),
+
+                      SizedBox(height: 20.h),
+                      _buildTextFormField(
                         controller: _vehicleController,
                         label: 'Vehicle',
                         icon: Icons.directions_car,
@@ -703,20 +830,29 @@ class _BusinessDailyActivityState extends State<BusinessDailyActivity> {
                         icon: Icons.edit,
                         hint: 'Enter edition details',
                       ),
-
                       SizedBox(height: 20.h),
-                      _buildDropdownField(
-                        value: _selectedActivityType,
-                        label: 'Activity Status',
-                        icon: Icons.assignment_turned_in,
-                        items: _activityTypes,
-                        hint: 'Select activity status',
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedActivityType = value;
-                          });
-                        },
+                      _buildTextFormField(
+                        controller: _positionController,
+                        label: 'Postion',
+                        icon: Icons.low_priority,
+                        hint: 'Enter Position details',
                       ),
+                      SizedBox(height: 20.h),
+                      _buildTextFormField(
+                        controller: _sizeController,
+                        label: 'Size',
+                        icon: Icons.photo_size_select_actual,
+                        hint: 'Enter size details',
+                      ),
+                      SizedBox(height: 20.h),
+                      _buildTextFormField(
+                        controller: _costController,
+                        label: 'Cost',
+                        icon: Icons.currency_rupee,
+                        hint: 'Enter Cost details',
+                      ),
+                      SizedBox(height: 20.h),
+                      _buildDateFormField(),
                     ],
                   ),
                   SizedBox(height: 40.h),

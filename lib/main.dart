@@ -1,4 +1,4 @@
-import 'package:daily_activity_report/view/screens/activity_report.dart';
+import 'package:daily_activity_report/utils/daiily_acticitvity_adapter_hive.dart';
 import 'package:daily_activity_report/view/screens/login.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -13,6 +13,9 @@ void main() async {
 
   // Register Hive Adapter
   Hive.registerAdapter(DailyActivityModelAdapter());
+
+  // Hive.registerAdapter(LocationModelAdapter());
+  // await Hive.openBox<LocationModel>('locations');
 
   runApp(const MyApp());
 }

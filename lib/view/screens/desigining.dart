@@ -6,8 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../utils/activity_hive_model.dart';
+import '../../utils/route_map/location.dart';
 import 'activity_report.dart';
-import 'daily_acticvity.dart';
 
 class DesigningDailyActivity extends StatefulWidget {
   const DesigningDailyActivity({super.key});
@@ -359,6 +360,8 @@ class _DesigningDailyActivityState extends State<DesigningDailyActivity> {
           vehicle: '',
           edition: '',
           position: '',
+          media: '',
+          cost: '',
         );
 
         await box.add(activity);
@@ -446,6 +449,13 @@ class _DesigningDailyActivityState extends State<DesigningDailyActivity> {
         shadowColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            onPressed: () {
+              Get.to(() => const RouteMapPage());
+            },
+            icon: Icon(Icons.location_on, size: 24.sp, color: Colors.white),
+            tooltip: 'View Map',
+          ),
           IconButton(
             onPressed: () {
               Get.to(ActivityDataTablePage());
