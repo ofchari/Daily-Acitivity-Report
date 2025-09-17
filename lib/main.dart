@@ -1,5 +1,5 @@
 import 'package:daily_activity_report/utils/daiily_acticitvity_adapter_hive.dart';
-import 'package:daily_activity_report/view/screens/login.dart';
+import 'package:daily_activity_report/view/screens/cutting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           ),
-          home: Login(),
+          home: Cutting(),
         );
       },
     );
